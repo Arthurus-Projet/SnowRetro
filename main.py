@@ -409,7 +409,7 @@ def jeu(map, fenetre):
 
 
 
-        ecrire('perso.txt', str(perso_class.perso_x - perso_class.biais_x) + " " + str(perso_class.perso_y + perso_class.biais_y))
+        ecrire('perso.txt', str(perso_class.perso_x - perso_class.biais_x) + " " + str(perso_class.perso_y - perso_class.biais_y))
 
 
         fenetre.blit(fond, (0, 0))
