@@ -80,7 +80,9 @@ class Player:
         return map
 
     # gère l'avancements des balles tour par tout
-    def avancement_balles(self):
+    def avancement_balles(self, y_map):
+
+        balles_dead = []
         vitesse = 9
         for i in range(len(self.balles)):
             if self.balles[i][2] == "d": # si la balle va à doite
@@ -88,11 +90,28 @@ class Player:
             else:
                 self.balles[i][0] -= vitesse
 
+            if self.balles[i][0] < 0:
+                balles_dead.append(self.balles[i])
+
+            if self.balles[i][0] > y_map:
+                balles_dead.append(self.balles[i])
+                
+
         for i in range(len(self.enemi_balles)):
             if self.enemi_balles[i][2] == "d": # si la balle va à doite
                 self.enemi_balles[i][0] += vitesse
             else:
                 self.enemi_balles[i][0] -= vitesse
+
+            if self.balles[i][0] < 0:
+                balles_dead.append(self.balles[i])
+
+            if self.balles[i][0] > y_map:
+                balles_dead.append(self.balles[i])
+
+        for elem in balles_dead:
+            print(elem)
+            self.balles.remove(elem)
 
     # quand on tire une balle
     def create_balle(self):

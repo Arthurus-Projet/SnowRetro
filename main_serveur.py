@@ -417,7 +417,7 @@ def jeu(map, fenetre):
 
 
         # Avancement de TOUTES les balles (les miennes + ennemies)
-        perso_class.avancement_balles()
+        perso_class.avancement_balles(len(map[0]) * taille_bloc)
 
         # Suppression de MES balles qui touchent un mur
         I = []
