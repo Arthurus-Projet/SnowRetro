@@ -98,3 +98,4 @@ class Player:
     def remove_balle(self, I):
         for elem in I:
             self.balles.remove(elem)
+

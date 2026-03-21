@@ -171,7 +171,7 @@ def collision(map, position_X, position_Y, perso_class, taille_objet_bloc, joueu
 
 
 ##########################################################################################################
-#                                             PYGAME
+#                                             PYGAME                                                     #
 ##########################################################################################################
 
 
@@ -408,7 +408,7 @@ def jeu(map, fenetre):
 
 
 
-        ecrire('perso.txt', str(perso_class.perso_x - perso_class.biais_x) + " " + str(perso_class.perso_y - perso_class.biais_y))
+        ecrire('perso.txt', str(perso_class.perso_x - perso_class.biais_x) + " " + str(perso_class.perso_y + perso_class.biais_y))
 
 
         fenetre.blit(fond, (0, 0))
@@ -433,7 +433,7 @@ def jeu(map, fenetre):
                     fenetre.blit(bloc_bas, (x * taille_bloc + perso_class.biais_x, y * taille_bloc + perso_class.biais_y))
 
 
-        fenetre.blit(perso, (perso_class.perso_x  , perso_class.perso_y), perso_anime.get_mask_for_multiple_states(gauche_boolean))
+        fenetre.blit(perso, (perso_class.perso_x, perso_class.perso_y), perso_anime.get_mask_for_multiple_states(gauche_boolean))
 
 
         Xtest, Ytest = lire("enemi.txt")
@@ -473,8 +473,13 @@ def jeu(map, fenetre):
             #musique_mort.play()
             perso_class.reset()
 
+        print("perso_class.biais_x", perso_class.biais_x)
+        print("perso_class.perso_x", perso_class.perso_x)
+
         pygame.display.update()
     write_map(map)
+
+    
 
 
 
