@@ -440,7 +440,7 @@ def jeu(map, fenetre):
         Xtest, Ytest = lire("enemi.txt")
         if Xtest!= -1 and Ytest != -1:
             X, Y = Xtest, Ytest
-        fenetre.blit(perso, (X + perso_class.biais_x, Y), pygame.Rect(1 * 32, 0, 32, 32))
+            fenetre.blit(perso, (X + perso_class.biais_x, Y+ perso_class.biais_y), pygame.Rect(1 * 32, 0, 32, 32))
 
 
         perso_class.avancement_balles()
@@ -474,8 +474,14 @@ def jeu(map, fenetre):
             #musique_mort.play()
             perso_class.reset()
 
-        print("perso_class.biais_x", perso_class.biais_x)
-        print("perso_class.perso_x", perso_class.perso_x)
+
+        if randint (0, 10) == 10:
+            print("perso_class.biais_x", perso_class.biais_x)
+            print("perso_class.perso_x", perso_class.perso_x)
+            print()
+            print("perso_class.biais_y", perso_class.biais_x)
+            print("perso_class.perso_y", perso_class.perso_x)
+
 
         pygame.display.update()
     write_map(map)
