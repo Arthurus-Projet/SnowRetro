@@ -10,6 +10,7 @@ class Player:
 
         # attribut pour les balles :
         self.balles = []
+        self.enemi_balles = []
         self.orientation_droite = True # le joueur est tourné vers la droite (utile pour le lancer de balle)
         self.taille_balle = 20
 
@@ -86,6 +87,12 @@ class Player:
                 self.balles[i][0] += vitesse
             else:
                 self.balles[i][0] -= vitesse
+
+        for i in range(len(self.enemi_balles)):
+            if self.enemi_balles[i][2] == "d": # si la balle va à doite
+                self.enemi_balles[i][0] += vitesse
+            else:
+                self.enemi_balles[i][0] -= vitesse
 
     # quand on tire une balle
     def create_balle(self):

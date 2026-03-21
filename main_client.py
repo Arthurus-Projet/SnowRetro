@@ -95,21 +95,58 @@ addr = ("176.140.159.32", 8080)  # Ipv4 du serveur
 
 client_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
-network_data = {"enemi_x": 0, "enemi_y": 0, "perso_x": 0, "perso_y": 0, "connected": False}
+network_data = {
+    "enemi_x": 0, "enemi_y": 0,
+    "perso_x": 0, "perso_y": 0,
+    "balle_x": 0,
+    "balle_y": 0,
+    "direction": "",
+    "enemi_balle_x": 0,
+    "enemi_balle_y": 0,
+    "enemi_direction": "",
+    "enemi_balles": [],
+    "connected": False,
+    "is_there_a_ball_shoot_in_this_turn": False,
+     "enemi_ball_shoot_in_this_turn": False 
+}
 
 def client_network_loop():
     while True:
         try:
+  
+
             x = network_data["perso_x"]
             y = network_data["perso_y"]
-            message = f"{x} {y}".encode("utf-8")
-            client_socket.sendto(message, addr)
+            balle_x = network_data["balle_x"]
+            balle_y = network_data["balle_y"]
+            direction = network_data["direction"]
 
-            client_socket.settimeout(0.1)
+            if network_data["is_there_a_ball_shoot_in_this_turn"] :
+                client_socket.sendto(f"{x} {y} {balle_x} {balle_y} {direction}".encode("utf-8"), addr)
+            else:
+                client_socket.sendto(f"{x} {y} ".encode("utf-8"), addr)
+
+            network_data["is_there_a_ball_shoot_in_this_turn"] = False
+
+            # reveice
+            client_socket.settimeout(0.01)
+            # Il faut :
             data, server = client_socket.recvfrom(1024)
             message = data.decode("utf-8").split(" ")
             network_data["enemi_x"] = int(message[0])
             network_data["enemi_y"] = int(message[1])
+
+            if (len(message) > 3):
+                network_data["enemi_balle_x"] = int(message[2])
+                network_data["enemi_balle_y"] = int(message[3])
+                network_data["enemi_direction"] = message[4]
+                network_data["enemi_ball_shoot_in_this_turn"] = True
+            else:
+                network_data["enemi_balle_x"] = 0
+                network_data["enemi_balle_y"] = 0
+                network_data["enemi_direction"] = ""
+                #network_data["is_there_a_ball_shoot_in_this_turn"] = False
+
             network_data["connected"] = True
         except socket.timeout:
             pass
@@ -277,6 +314,12 @@ def jeu(map, fenetre):
                         perso_class.create_balle()
                         can_shoot = False
                         count = 6
+                        # Pour le client 
+                        is_there_a_ball_shoot_in_this_turn = True
+                        network_data["balle_x"] = perso_class.perso_x - perso_class.biais_x
+                        network_data["balle_y"] = perso_class.perso_y - perso_class.biais_y
+                        network_data["direction"] = perso_class.balles[-1][2]
+                        network_data["is_there_a_ball_shoot_in_this_turn"] = True
 
             if event.type == KEYUP:
                 if event.key == pygame.K_d:
@@ -416,6 +459,27 @@ def jeu(map, fenetre):
 
         for balle in perso_class.balles:
             pygame.draw.rect(fenetre, rouge, (balle[0] + perso_class.biais_x, balle[1] + perso_class.biais_y, perso_class.taille_balle, perso_class.taille_balle))
+
+
+        if network_data["enemi_balle_x"] != 0 and network_data["enemi_balle_y"] != 0 and network_data["enemi_ball_shoot_in_this_turn"]:
+            perso_class.enemi_balles.append([network_data["enemi_balle_x"], network_data["enemi_balle_y"], network_data["enemi_direction"]] )
+            network_data["enemi_ball_shoot_in_this_turn"] = False
+
+        I = []
+        for i in range(len(perso_class.enemi_balles)):
+            balle_x = perso_class.enemi_balles[i][0] + perso_class.biais_x
+            balle_y = perso_class.enemi_balles[i][1] + perso_class.biais_y
+
+            if collision(map, balle_x, balle_y, perso_class, taille_bloc, perso_class.taille_balle):
+                print("suppresision")
+                I.append(perso_class.enemi_balles[i])
+
+        for elem in I:
+            perso_class.enemi_balles.remove(elem)
+
+        for balle in perso_class.enemi_balles:
+            pygame.draw.rect(fenetre, (211, 192, 29), (balle[0] + perso_class.biais_x, balle[1] + perso_class.biais_y, perso_class.taille_balle, perso_class.taille_balle))
+
 
         fps = str(int(clock.get_fps()))
         menu.texte(fps, (255, 255, 0), 20, 20, 30)
