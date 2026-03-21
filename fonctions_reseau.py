@@ -20,9 +20,15 @@ def lire(name_file):
         return float(read[0]), float(read[1])
     return -1, -1
 
+"""
 def lire_str(name_file):
     fic = open(name_file, "r")
     read = fic.read()
     fic.close()
 
     return bytes(read, "utf-8")
+"""
+
+def lire_str(name_file):
+    with open(name_file, "rb") as fic:
+        return fic.read()
