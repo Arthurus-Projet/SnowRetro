@@ -24,10 +24,11 @@ pygame.display.set_caption('SnowRetro')
 clock = pygame.time.Clock()
 
 # musique :
+"""
 pygame.mixer.music.load('image\musique\m1.wav')
 pygame.mixer.music.set_volume(0.0)          # réglage du volume (facultatif)
 pygame.mixer.music.play(-1)                 # joue le morceau en boucle
-
+"""
 #musique_mort = pygame.mixer.Sound('image\musique\mort.wav')
 
 taille_bloc = 64
