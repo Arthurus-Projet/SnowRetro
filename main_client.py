@@ -2,10 +2,10 @@ import pygame
 from pygame.locals import *
 import sys, pygame.mixer, time
 from random import randint
-import pygame.freetype # pour importer ses propres librairies
+import pygame.freetype
 from copy import deepcopy
 import socket
-from fonctions_reseau import *
+import threading
 
 # import class :
 from animations import *
@@ -25,20 +25,11 @@ pygame.init()
 pygame.display.set_caption('SnowRetro')
 clock = pygame.time.Clock()
 
-# musique :
-"""
-pygame.mixer.music.load('image\musique\m1.wav')
-pygame.mixer.music.set_volume(0.0)          # réglage du volume (facultatif)
-pygame.mixer.music.play(-1)                 # joue le morceau en boucle
-"""
-#musique_mort = pygame.mixer.Sound('image\musique\mort.wav')
-
 taille_bloc = 64
 taille_joueur_x = 32
 taille_joueur_y = 32
 
 frame = 0
-
 
 # partie pygame :
 coef = 1
@@ -83,7 +74,7 @@ bloc_bas = pygame.transform.scale(bloc_bas, (taille_bloc, taille_bloc))
 
 # nuage géré avec une classe pour l'animation :
 image_nuage = pygame.image.load("image/nuage.png").convert_alpha()
-test_nuage = animation( 200, 340, 142, 4)
+test_nuage = animation(200, 340, 142, 4)
 
 nuage2 = pygame.image.load("image/nuage_2.png").convert_alpha()
 nuage2_class = animation(300, 250, 110, 4)
@@ -96,14 +87,40 @@ bleu = (0, 0, 255)
 mystère = (randint(0, 255), randint(0, 255), randint(0, 255))
 
 print(mystère)
-#mystère = (121, 96, 210)
 
 
-# Client 
-addr = ("176.140.159.32", 8080) # Mon Ipv4
+# ===================== CLIENT RÉSEAU (THREAD) =====================
+
+addr = ("176.140.159.32", 8080)  # Ipv4 du serveur
 
 client_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-client_socket.settimeout(0.5)
+
+network_data = {"enemi_x": 0, "enemi_y": 0, "perso_x": 0, "perso_y": 0, "connected": False}
+
+def client_network_loop():
+    while True:
+        try:
+            x = network_data["perso_x"]
+            y = network_data["perso_y"]
+            message = f"{x} {y}".encode("utf-8")
+            client_socket.sendto(message, addr)
+
+            client_socket.settimeout(0.1)
+            data, server = client_socket.recvfrom(1024)
+            message = data.decode("utf-8").split(" ")
+            network_data["enemi_x"] = int(message[0])
+            network_data["enemi_y"] = int(message[1])
+            network_data["connected"] = True
+        except socket.timeout:
+            pass
+        except Exception as e:
+            print(f"Erreur réseau client: {e}")
+
+thread = threading.Thread(target=client_network_loop, daemon=True)
+thread.start()
+
+# ==================================================================
+
 
 # test si le jouer peut sauter :
 def collision_haut(map, position_X, position_Y, perso_class):
@@ -113,50 +130,40 @@ def collision_haut(map, position_X, position_Y, perso_class):
                 Y = y * taille_bloc + perso_class.biais_y
                 X = x * taille_bloc + perso_class.biais_x
 
-                if Y <= position_Y  <=  Y + taille_bloc  and X <= position_X <=  X + taille_bloc:
-                    if  X <= position_X + 1 <=  X + taille_bloc:
+                if Y <= position_Y <= Y + taille_bloc and X <= position_X <= X + taille_bloc:
+                    if X <= position_X + 1 <= X + taille_bloc:
                         return True
 
-                if Y <= position_Y <=  Y + taille_bloc  and X <= position_X + taille_joueur_x <=  X + taille_bloc:
-                    if   X <= position_X + taille_joueur_x -1 <=  X + taille_bloc:
+                if Y <= position_Y <= Y + taille_bloc and X <= position_X + taille_joueur_x <= X + taille_bloc:
+                    if X <= position_X + taille_joueur_x - 1 <= X + taille_bloc:
                         return True
     return False
 
-# sert à tester si le jouer doit tomber ou si il est sur le sol :
+
 def collision_bas(map, position_X, position_Y, perso_class):
     for y in range(len(map)):
         for x in range(len(map[y])):
-
             if map[y][x] != ' ':
                 Y = y * taille_bloc + perso_class.biais_y
                 X = x * taille_bloc + perso_class.biais_x
 
-                if Y <= position_Y + taille_joueur_y <=  Y + taille_bloc  and X <= position_X <=  X + taille_bloc:
-                    if  X <= position_X + 1 <=  X + taille_bloc: # bloc sur bloc
+                if Y <= position_Y + taille_joueur_y <= Y + taille_bloc and X <= position_X <= X + taille_bloc:
+                    if X <= position_X + 1 <= X + taille_bloc:
                         return True
 
-                if Y <= position_Y + taille_joueur_y <=  Y + taille_bloc  and X <= position_X + taille_joueur_x <=  X + taille_bloc:
-                    if   X <= position_X + taille_joueur_x -1 <=  X + taille_bloc:
+                if Y <= position_Y + taille_joueur_y <= Y + taille_bloc and X <= position_X + taille_joueur_x <= X + taille_bloc:
+                    if X <= position_X + taille_joueur_x - 1 <= X + taille_bloc:
                         return True
     return False
 
 
-############ 2 FONCTIONS POUR TESTER SI LE JOUEUR PEUT SE DEPLACER AU NOUVEL ENDROIT ############
-
-
-# REGARDE si la nouvelle position touche quelque chose :
 def around_collision(position_joueur_x, position_joueur_y, bloc_x, bloc_y, taille_objet):
     around = [[1, 1], [-1, -1], [-1, 1], [1, -1]]
-
     for a in around:
-        if False == (bloc_x <= position_joueur_x + a[0]  <= bloc_x + taille_objet and bloc_y <= position_joueur_y + a[1] <= bloc_y + taille_objet):
+        if False == (bloc_x <= position_joueur_x + a[0] <= bloc_x + taille_objet and bloc_y <= position_joueur_y + a[1] <= bloc_y + taille_objet):
             return False
     return True
 
-
-
-# FONCTION qui test si il y a une collision, c'est à dire
-# si le joueur touche un mur :
 
 def collision(map, position_X, position_Y, perso_class, taille_objet_bloc, joueur):
     value_Y = [0, joueur, 0, joueur]
@@ -164,17 +171,15 @@ def collision(map, position_X, position_Y, perso_class, taille_objet_bloc, joueu
 
     for y in range(len(map)):
         for x in range(len(map[y])):
-
             if map[y][x] != ' ':
                 Y = (y * taille_objet_bloc) + perso_class.biais_y
                 X = (x * taille_objet_bloc) + perso_class.biais_x
 
                 for i in range(4):
-                    if Y < position_Y + value_Y[i] <  Y + taille_objet_bloc  and X < position_X + value_X[i] <  X + taille_objet_bloc:
-                        if around_collision(position_X  + value_X[i] , position_Y + value_Y[i], X, Y, taille_objet_bloc):
+                    if Y < position_Y + value_Y[i] < Y + taille_objet_bloc and X < position_X + value_X[i] < X + taille_objet_bloc:
+                        if around_collision(position_X + value_X[i], position_Y + value_Y[i], X, Y, taille_objet_bloc):
                             return True
     return False
-
 
 
 ##########################################################################################################
@@ -182,30 +187,15 @@ def collision(map, position_X, position_Y, perso_class, taille_objet_bloc, joueu
 ##########################################################################################################
 
 
-
 def jeu(map, fenetre):
     perso_class = Player(map, taille_bloc)
 
-
-
-    """nb_joysticks = pygame.joystick.get_count()
-    if nb_joysticks > 0:
-        manette_1 = pygame.joystick.Joystick(0)
-        manette_1.init()
-        pygame.joystick.init()"""
-
-
-
-    speed = 11 #vitesse déplacement droite ou gauche
-
+    speed = 11
 
     etat_jump = False
-
     stat_deplacement_droite = False
     stat_deplacement_gauche = False
 
-
-    #variable pour l'orientation du personnage
     gauche_boolean = 0
 
     valeur_saut_par_frame = 16
@@ -221,8 +211,7 @@ def jeu(map, fenetre):
     count = 0
     number = 200
 
-
-    pygame.key.set_repeat(1, 1) #truque à mettre pour rester appuyer sur une touche
+    pygame.key.set_repeat(1, 1)
 
     time_next_frame = 50
     bool_marche = False
@@ -239,31 +228,24 @@ def jeu(map, fenetre):
         for event in pygame.event.get():
             if event.type == QUIT:
                 continuer = False
-            if event.type == KEYDOWN  :
+            if event.type == KEYDOWN:
 
-
-                ################## CLAVIER ##################
                 if event.key == K_ESCAPE:
                     fenetre = pygame.display.set_mode(taille)
-                # Gestion du saut :
-                if pygame.key.get_pressed()[pygame.K_w] or pygame.key.get_pressed()[pygame.K_z]: # w = z
-                    if collision_bas(map, perso_class.perso_x, perso_class.perso_y, perso_class) :
+
+                if pygame.key.get_pressed()[pygame.K_w] or pygame.key.get_pressed()[pygame.K_z]:
+                    if collision_bas(map, perso_class.perso_x, perso_class.perso_y, perso_class):
                         etat_jump = True
                         jump = nombre_de_jump
-
                         time_long_saut = 100
                         saut_long = True
-
                         haut = True
                         second_jump = 1
-
                     else:
                         if haut == False and second_jump == 1:
                             print("JUMP")
-
                             jump += 10
                             etat_jump = True
-
                             haut = True
                             second_jump -= 1
 
@@ -272,16 +254,13 @@ def jeu(map, fenetre):
                         jump += 5
                         saut_long = False
 
-
-                # DROITE
                 if pygame.key.get_pressed()[pygame.K_d]:
                     stat_deplacement_droite = True
                     gauche_boolean = 0
                     bool_marche = True
                     perso_class.orientation_droite = True
 
-                # GAUCHE
-                if pygame.key.get_pressed()[pygame.K_a] or pygame.key.get_pressed()[pygame.K_q]: # GAUCHE Q
+                if pygame.key.get_pressed()[pygame.K_a] or pygame.key.get_pressed()[pygame.K_q]:
                     stat_deplacement_gauche = True
                     gauche_boolean = 1
                     bool_marche = True
@@ -290,7 +269,6 @@ def jeu(map, fenetre):
                 if pygame.key.get_pressed()[K_UP]:
                     perso_class.biais_y += 8
                 if pygame.key.get_pressed()[K_DOWN]:
-                    #if  collision_bas(map, perso_class.perso_x, perso_class.perso_y, perso_class) == False:
                     perso_class.biais_y -= 8
 
                 if event.key == pygame.K_LSHIFT or event.key == pygame.K_SPACE or event.key == pygame.K_LEFT:
@@ -300,14 +278,13 @@ def jeu(map, fenetre):
                         can_shoot = False
                         count = 6
 
-            # Quand on lève le doigt d'une touche clavier
             if event.type == KEYUP:
                 if event.key == pygame.K_d:
                     stat_deplacement_droite = False
                     bool_marche = False
                     gauche_boolean = 0
 
-                if event.key == pygame.K_a or event.key == pygame.K_q: # GAUCHE Q
+                if event.key == pygame.K_a or event.key == pygame.K_q:
                     stat_deplacement_gauche = False
                     bool_marche = False
                     gauche_boolean = 1
@@ -315,57 +292,39 @@ def jeu(map, fenetre):
                 if event.key == pygame.K_w or event.key == pygame.K_z:
                     time_long_saut = 100
                     haut = False
-            #if event.type == pygame.MOUSEBUTTONDOWN:
 
             boutton = pygame.mouse.get_pressed()
             pos = pygame.mouse.get_pos()
             if boutton[2]:
-                map = perso_class.new_block( map, pos, 'x')
+                map = perso_class.new_block(map, pos, 'x')
             elif boutton[0]:
-                map = perso_class.new_block( map, pos, ' ')
+                map = perso_class.new_block(map, pos, ' ')
 
-            ########## MANETTE #########
-
-            # quand on appui sur la manette
-            if event.type == pygame.JOYBUTTONDOWN :
-                if event.button == 13: # droite
+            if event.type == pygame.JOYBUTTONDOWN:
+                if event.button == 13:
                     stat_deplacement_droite = True
                     gauche_boolean = 0
-                if event.button == 15: # gauche
-                     stat_deplacement_gauche = True
-                     gauche_boolean = 1
-                if event.button == 2: # bouton saut
-                    if collision(map, perso_class.perso_x, perso_class.perso_y - valeur_saut_par_frame, taille_bloc, 32) == False :
+                if event.button == 15:
+                    stat_deplacement_gauche = True
+                    gauche_boolean = 1
+                if event.button == 2:
+                    if collision(map, perso_class.perso_x, perso_class.perso_y - valeur_saut_par_frame, taille_bloc, 32) == False:
                         etat_jump = True
                         jump = nombre_de_jump
 
-            # quand on lève la manette
-            if event.type == pygame.JOYBUTTONUP :
-                if event.button == 13: # droite
+            if event.type == pygame.JOYBUTTONUP:
+                if event.button == 13:
                     stat_deplacement_droite = False
-                if event.button == 15: # gauche
-                     stat_deplacement_gauche = False
-
-            ############################################################################################################
-            ################################### FIN GESTION TOUCHE #####################################################
-            ############################################################################################################
+                if event.button == 15:
+                    stat_deplacement_gauche = False
 
 
-        # Teste si le joueur tombe en bas de la map, si il tombe il respawn
         perso_class.player_fall(hauteur, map)
 
-
-
-
-
-        """for trr in range(100_000):
-            fre = 2 * 412"""
-
-        # Initialisation du biais neige pour que la neige est une forme différente en fonction des mouvements du joueur
         BIAIS_NEIGE = 0
 
         if stat_deplacement_gauche:
-            if collision(map, perso_class.perso_x - speed , perso_class.perso_y, perso_class, taille_bloc, 32) == False:
+            if collision(map, perso_class.perso_x - speed, perso_class.perso_y, perso_class, taille_bloc, 32) == False:
                 if 185 <= perso_class.perso_x <= 312:
                     perso_class.perso_x -= speed
                 else:
@@ -373,27 +332,22 @@ def jeu(map, fenetre):
                     BIAIS_NEIGE = speed
 
         if stat_deplacement_droite:
-            if collision(map, perso_class.perso_x + speed , perso_class.perso_y, perso_class, taille_bloc, 32) == False: # droite D
-                if 182 <= perso_class.perso_x  <= 311:
+            if collision(map, perso_class.perso_x + speed, perso_class.perso_y, perso_class, taille_bloc, 32) == False:
+                if 182 <= perso_class.perso_x <= 311:
                     perso_class.perso_x += speed
                 else:
                     perso_class.biais_x -= speed
                     BIAIS_NEIGE = -speed
 
-
         BIAIS_NEIGE_Y = 0
 
-        # gère les saut
         if jump > 0 and etat_jump == True:
             if collision_haut(map, perso_class.perso_x, perso_class.perso_y - valeur_saut_par_frame, perso_class) == False:
-
-                if perso_class.perso_y  < 100:
+                if perso_class.perso_y < 100:
                     perso_class.biais_y += valeur_saut_par_frame
                     BIAIS_NEIGE_Y = valeur_saut_par_frame
                 else:
                     perso_class.perso_y -= valeur_saut_par_frame
-                #perso_class.perso_y -= valeur_saut_par_frame
-
                 jump -= 1
                 speed = 11
             else:
@@ -403,7 +357,6 @@ def jeu(map, fenetre):
             etat_jump = False
             speed = 11
 
-        # quand le perso tombe
         if etat_jump == False:
             if collision_bas(map, perso_class.perso_x, perso_class.perso_y, perso_class) == False:
                 if perso_class.perso_y > 300:
@@ -411,23 +364,21 @@ def jeu(map, fenetre):
                     BIAIS_NEIGE_Y -= 8
                 else:
                     perso_class.perso_y += 8
-                #perso_class.perso_y += 8
 
 
-
-        ecrire('perso.txt', str(perso_class.perso_x - perso_class.biais_x) + " " + str(perso_class.perso_y - perso_class.biais_y))
+        # ===== RÉSEAU : met à jour la position pour le thread =====
+        network_data["perso_x"] = perso_class.perso_x - perso_class.biais_x
+        network_data["perso_y"] = perso_class.perso_y - perso_class.biais_y
+        # ===========================================================
 
 
         fenetre.blit(fond, (0, 0))
 
-        # affiche les animations des nuages :
-        fenetre.blit(nuage2, (1050 + perso_class.biais_x /(2.5), 30 + perso_class.biais_y), nuage2_class.get_mask(dt))
-        fenetre.blit(image_nuage, (800 + perso_class.biais_x / 2, 50  + perso_class.biais_y), test_nuage.get_mask(dt))
+        fenetre.blit(nuage2, (1050 + perso_class.biais_x / (2.5), 30 + perso_class.biais_y), nuage2_class.get_mask(dt))
+        fenetre.blit(image_nuage, (800 + perso_class.biais_x / 2, 50 + perso_class.biais_y), test_nuage.get_mask(dt))
 
-        # affiche les animations de la neige
         Snow.tour(fenetre, BIAIS_NEIGE, BIAIS_NEIGE_Y)
 
-        # dessine la map :
         for y in range(len(map)):
             for x in range(len(map[y])):
                 if map[y][x] == 'x':
@@ -439,36 +390,15 @@ def jeu(map, fenetre):
                 elif map[y][x] == "b":
                     fenetre.blit(bloc_bas, (x * taille_bloc + perso_class.biais_x, y * taille_bloc + perso_class.biais_y))
 
-
         fenetre.blit(perso, (perso_class.perso_x, perso_class.perso_y), perso_anime.get_mask_for_multiple_states(gauche_boolean))
 
 
-        """Xtest, Ytest = lire("enemi.txt")
-        if Xtest!= -1 and Ytest != -1:
-            X, Y = Xtest, Ytest
-            fenetre.blit(perso, (X + perso_class.biais_x, Y+ perso_class.biais_y), pygame.Rect(1 * 32, 0, 32, 32))
-        """
-
-     
-
-        try:
-            #client_socket.settimeout(1.0)
-
-            message = f"{x} {y}".encode("utf-8")
-            client_socket.sendto(message, addr)
-
-            data, server = client_socket.recvfrom(1024)
-
-            message = data.decode("utf-8")
-            message = message.split(" ")
-            X = int(message[0])
-            Y = int(message[1])
+        # ===== RÉSEAU : affiche l'ennemi =====
+        if network_data["connected"]:
+            X = network_data["enemi_x"]
+            Y = network_data["enemi_y"]
             fenetre.blit(perso, (X + perso_class.biais_x, Y + perso_class.biais_y), pygame.Rect(1 * 32, 0, 32, 32))
-
-         
-        except socket.timeout:
-            print("Time out")
-            continue
+        # ======================================
 
 
         perso_class.avancement_balles()
@@ -484,40 +414,27 @@ def jeu(map, fenetre):
 
         perso_class.remove_balle(I)
 
-
-
-
         for balle in perso_class.balles:
-            pygame.draw.rect(fenetre, rouge, (balle[0] + perso_class.biais_x, balle[1] + + perso_class.biais_y, perso_class.taille_balle, perso_class.taille_balle))
+            pygame.draw.rect(fenetre, rouge, (balle[0] + perso_class.biais_x, balle[1] + perso_class.biais_y, perso_class.taille_balle, perso_class.taille_balle))
 
         fps = str(int(clock.get_fps()))
-        menu.texte( fps, (255, 255, 0), 20, 20, 30)
+        menu.texte(fps, (255, 255, 0), 20, 20, 30)
 
         if bool_marche:
             perso_anime.set_time(dt)
 
-
-
         if perso_class.dead:
-            #musique_mort.play()
             perso_class.reset()
 
-
-        if randint (0, 10) == 10:
+        if randint(0, 10) == 10:
             print("perso_class.biais_x", perso_class.biais_x)
             print("perso_class.perso_x", perso_class.perso_x)
             print()
             print("perso_class.biais_y", perso_class.biais_x)
             print("perso_class.perso_y", perso_class.perso_x)
 
-        
-
         pygame.display.update()
     write_map(map)
-
-    
-
-
 
 
 ################### MENU ############################
@@ -540,26 +457,21 @@ while continuer:
     for event in pygame.event.get():
         if event.type == QUIT:
             continuer = False
-        if event.type == KEYDOWN  :
-            ################## CLAVIER ##################
+        if event.type == KEYDOWN:
             if event.key == K_ESCAPE:
                 fenetre = pygame.display.set_mode(taille)
 
-            ################## SOURIS ##################
         if event.type == pygame.MOUSEBUTTONDOWN:
             pos = pygame.mouse.get_pos()
             print(pos)
             if 288 <= pos[0] <= 720 and 133 <= pos[1] <= 197:
-                #ecrire('perso.txt', "108" + " " + "224")
                 jeu(deepcopy(level_1()), fenetre)
             if 288 <= pos[0] <= 720 and 217 <= pos[1] <= 280:
                 jeu(deepcopy(level_2()), fenetre)
             if 288 <= pos[0] <= 720 and 296 <= pos[1] <= 357:
                 jeu(deepcopy(level_3()), fenetre)
             if 288 <= pos[0] <= 720 and 372 <= pos[1] <= 434:
-                #ecrire('perso.txt', "203" + " " + "160")
                 jeu(deepcopy(level_4()), fenetre)
-
 
     fenetre.blit(home, (0, 0))
 
@@ -573,6 +485,5 @@ while continuer:
     Snow.tour(fenetre, 0, 0)
 
     pygame.display.update()
-
 
 pygame.quit()
