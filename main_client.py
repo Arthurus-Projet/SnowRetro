@@ -89,11 +89,11 @@ mystère = (randint(0, 255), randint(0, 255), randint(0, 255))
 print(mystère)
 
 
-# ===================== SERVEUR RÉSEAU (THREAD) =====================
+# ===================== CLIENT RÉSEAU (THREAD) =====================
 
-server_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-server_socket.bind(('0.0.0.0', 8080))
+addr = ("176.140.159.32", 8080)  # Ipv4 du serveur
+
+client_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
 network_data = {
     "enemi_x": 0, "enemi_y": 0,
@@ -107,10 +107,22 @@ network_data = {
 }
 
 
-def server_network_loop():
+def client_network_loop():
     while True:
         try:
-            data, address = server_socket.recvfrom(2048)
+            # Envoi de ma position + éventuellement une balle
+            x = network_data["perso_x"]
+            y = network_data["perso_y"]
+
+            if len(network_data["balles_to_send"]) > 0:
+                balle = network_data["balles_to_send"].pop(0)
+                client_socket.sendto(f"{x} {y} {balle['x']} {balle['y']} {balle['dir']}".encode("utf-8"), addr)
+            else:
+                client_socket.sendto(f"{x} {y} ".encode("utf-8"), addr)
+
+            # Réception
+            client_socket.settimeout(0.1)
+            data, server = client_socket.recvfrom(2048)
             message = data.decode("utf-8").split(" ")
             network_data["enemi_x"] = int(message[0])
             network_data["enemi_y"] = int(message[1])
@@ -123,24 +135,16 @@ def server_network_loop():
 
             network_data["connected"] = True
 
-            # Envoi de ma position + éventuellement une balle
-            x = network_data["perso_x"]
-            y = network_data["perso_y"]
-
-            if len(network_data["balles_to_send"]) > 0:
-                balle = network_data["balles_to_send"].pop(0)
-                server_socket.sendto(f"{x} {y} {balle['x']} {balle['y']} {balle['dir']}".encode("utf-8"), address)
-            else:
-                server_socket.sendto(f"{x} {y} ".encode("utf-8"), address)
-
+        except socket.timeout:
+            pass
         except Exception as e:
-            print(f"Erreur réseau serveur: {e}")
+            print(f"Erreur réseau client: {e}")
 
 
-thread = threading.Thread(target=server_network_loop, daemon=True)
+thread = threading.Thread(target=client_network_loop, daemon=True)
 thread.start()
 
-# ===================================================================
+# ==================================================================
 
 
 def collision_haut(map, position_X, position_Y, perso_class):
