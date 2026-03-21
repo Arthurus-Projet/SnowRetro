@@ -98,55 +98,44 @@ server_socket.bind(('0.0.0.0', 8080))
 network_data = {
     "enemi_x": 0, "enemi_y": 0,
     "perso_x": 0, "perso_y": 0,
-    "balle_x": 0,
-    "balle_y": 0,
-    "direction": "",
+    "balles_to_send": [],       # file d'attente des balles à envoyer
+    "enemi_new_bullet": False,  # flag : nouvelle balle ennemie reçue
     "enemi_balle_x": 0,
     "enemi_balle_y": 0,
     "enemi_direction": "",
-    "enemi_balles": [],
-    "connected": False,
-    "is_there_a_ball_shoot_in_this_turn": False,
-     "enemi_ball_shoot_in_this_turn": False 
+    "connected": False
 }
 
-is_there_a_ball_shoot_in_this_turn = False
 
 def server_network_loop():
     while True:
         try:
-            message, address = server_socket.recvfrom(2048)
-            message = message.decode("utf-8").split(" ")
+            data, address = server_socket.recvfrom(2048)
+            message = data.decode("utf-8").split(" ")
             network_data["enemi_x"] = int(message[0])
             network_data["enemi_y"] = int(message[1])
 
-            if (len(message) > 3):
+            if len(message) > 3:
                 network_data["enemi_balle_x"] = int(message[2])
                 network_data["enemi_balle_y"] = int(message[3])
                 network_data["enemi_direction"] = message[4]
-                network_data["enemi_ball_shoot_in_this_turn"] = True
-            else:
-                network_data["enemi_balle_x"] = 0
-                network_data["enemi_balle_y"] = 0
-                network_data["enemi_direction"] = ""
-                #network_data["is_there_a_ball_shoot_in_this_turn"] = False
+                network_data["enemi_new_bullet"] = True
 
             network_data["connected"] = True
 
+            # Envoi de ma position + éventuellement une balle
             x = network_data["perso_x"]
             y = network_data["perso_y"]
-            balle_x = network_data["balle_x"]
-            balle_y = network_data["balle_y"]
-            direction = network_data["direction"]
 
-            if network_data["is_there_a_ball_shoot_in_this_turn"] :
-                server_socket.sendto(f"{x} {y} {balle_x} {balle_y} {direction}".encode("utf-8"), address)
+            if len(network_data["balles_to_send"]) > 0:
+                balle = network_data["balles_to_send"].pop(0)
+                server_socket.sendto(f"{x} {y} {balle['x']} {balle['y']} {balle['dir']}".encode("utf-8"), address)
             else:
                 server_socket.sendto(f"{x} {y} ".encode("utf-8"), address)
 
-            network_data["is_there_a_ball_shoot_in_this_turn"] = False
         except Exception as e:
             print(f"Erreur réseau serveur: {e}")
+
 
 thread = threading.Thread(target=server_network_loop, daemon=True)
 thread.start()
@@ -154,7 +143,6 @@ thread.start()
 # ===================================================================
 
 
-# test si le jouer peut sauter :
 def collision_haut(map, position_X, position_Y, perso_class):
     for y in range(len(map)):
         for x in range(len(map[y])):
@@ -223,28 +211,22 @@ def jeu(map, fenetre):
     perso_class = Player(map, taille_bloc)
 
     speed = 11
-
     etat_jump = False
     stat_deplacement_droite = False
     stat_deplacement_gauche = False
-
     gauche_boolean = 0
-
     valeur_saut_par_frame = 16
     nombre_de_jump = 10
     jump = 0
-
     haut = False
     second_jump = 1
     time_long_saut = 100
     saut_long = False
-
     can_shoot = True
     count = 0
     number = 200
 
     pygame.key.set_repeat(1, 1)
-
     time_next_frame = 50
     bool_marche = False
 
@@ -252,7 +234,6 @@ def jeu(map, fenetre):
     while continuer:
 
         count -= 1
-
         if count < 0:
             can_shoot = True
 
@@ -275,7 +256,6 @@ def jeu(map, fenetre):
                         second_jump = 1
                     else:
                         if haut == False and second_jump == 1:
-                            print("JUMP")
                             jump += 10
                             etat_jump = True
                             haut = True
@@ -304,29 +284,26 @@ def jeu(map, fenetre):
                     perso_class.biais_y -= 8
 
                 if event.key == pygame.K_LSHIFT or event.key == pygame.K_SPACE or event.key == pygame.K_LEFT:
-                    print("shift")
                     if can_shoot:
                         perso_class.create_balle()
                         can_shoot = False
                         count = 6
-                        # Pour le serveur :
-                        is_there_a_ball_shoot_in_this_turn = True
-                        network_data["balle_x"] = perso_class.perso_x - perso_class.biais_x
-                        network_data["balle_y"] = perso_class.perso_y - perso_class.biais_y
-                        network_data["direction"] = perso_class.balles[-1][2]
-                        network_data["is_there_a_ball_shoot_in_this_turn"] = True
+                        # Ajoute la balle dans la file d'attente réseau
+                        network_data["balles_to_send"].append({
+                            "x": perso_class.perso_x - perso_class.biais_x,
+                            "y": perso_class.perso_y - perso_class.biais_y,
+                            "dir": perso_class.balles[-1][2]
+                        })
 
             if event.type == KEYUP:
                 if event.key == pygame.K_d:
                     stat_deplacement_droite = False
                     bool_marche = False
                     gauche_boolean = 0
-
                 if event.key == pygame.K_a or event.key == pygame.K_q:
                     stat_deplacement_gauche = False
                     bool_marche = False
                     gauche_boolean = 1
-
                 if event.key == pygame.K_w or event.key == pygame.K_z:
                     time_long_saut = 100
                     haut = False
@@ -439,42 +416,58 @@ def jeu(map, fenetre):
         # ======================================
 
 
+        # Avancement de TOUTES les balles (les miennes + ennemies)
         perso_class.avancement_balles()
 
+        # Suppression de MES balles qui touchent un mur
         I = []
         for i in range(len(perso_class.balles)):
             balle_x = perso_class.balles[i][0] + perso_class.biais_x
             balle_y = perso_class.balles[i][1] + perso_class.biais_y
-
             if collision(map, balle_x, balle_y, perso_class, taille_bloc, perso_class.taille_balle):
-                print("suppresision")
                 I.append(perso_class.balles[i])
-
         perso_class.remove_balle(I)
 
-
+        # Affiche MES balles (en rouge)
         for balle in perso_class.balles:
             pygame.draw.rect(fenetre, rouge, (balle[0] + perso_class.biais_x, balle[1] + perso_class.biais_y, perso_class.taille_balle, perso_class.taille_balle))
 
-        if network_data["enemi_balle_x"] != 0 and network_data["enemi_balle_y"] != 0 and network_data["enemi_ball_shoot_in_this_turn"]:
-            perso_class.enemi_balles.append([network_data["enemi_balle_x"], network_data["enemi_balle_y"], network_data["enemi_direction"]] )
-            network_data["enemi_ball_shoot_in_this_turn"] = False
 
+        # ===== BALLES ENNEMIES =====
+        # Ajoute une nouvelle balle ennemie si le thread en a reçu une
+        if network_data["enemi_new_bullet"]:
+            perso_class.enemi_balles.append([
+                network_data["enemi_balle_x"],
+                network_data["enemi_balle_y"],
+                network_data["enemi_direction"]
+            ])
+            network_data["enemi_new_bullet"] = False
+
+        # Suppression des balles ennemies qui touchent un mur
         I = []
         for i in range(len(perso_class.enemi_balles)):
             balle_x = perso_class.enemi_balles[i][0] + perso_class.biais_x
             balle_y = perso_class.enemi_balles[i][1] + perso_class.biais_y
-
             if collision(map, balle_x, balle_y, perso_class, taille_bloc, perso_class.taille_balle):
-                print("suppresision")
                 I.append(perso_class.enemi_balles[i])
-
         for elem in I:
             perso_class.enemi_balles.remove(elem)
 
+        # Affiche les balles ennemies (en jaune) + détection de mort
         for balle in perso_class.enemi_balles:
-            pygame.draw.rect(fenetre, (211, 192, 29), (balle[0] + perso_class.biais_x, balle[1] + perso_class.biais_y, perso_class.taille_balle, perso_class.taille_balle))
+            bx = balle[0] + perso_class.biais_x
+            by = balle[1] + perso_class.biais_y
+            pygame.draw.rect(fenetre, (211, 192, 29), (bx, by, perso_class.taille_balle, perso_class.taille_balle))
 
+            # Collision AABB : balle ennemie vs mon perso
+            px = perso_class.perso_x
+            py = perso_class.perso_y
+            if (px < bx + perso_class.taille_balle and
+                px + taille_joueur_x > bx and
+                py < by + perso_class.taille_balle and
+                py + taille_joueur_y > by):
+                perso_class.dead = True
+        # ============================
 
 
         fps = str(int(clock.get_fps()))
@@ -520,10 +513,8 @@ while continuer:
         if event.type == KEYDOWN:
             if event.key == K_ESCAPE:
                 fenetre = pygame.display.set_mode(taille)
-
         if event.type == pygame.MOUSEBUTTONDOWN:
             pos = pygame.mouse.get_pos()
-            print(pos)
             if 288 <= pos[0] <= 720 and 133 <= pos[1] <= 197:
                 jeu(deepcopy(level_1()), fenetre)
             if 288 <= pos[0] <= 720 and 217 <= pos[1] <= 280:
@@ -534,16 +525,12 @@ while continuer:
                 jeu(deepcopy(level_4()), fenetre)
 
     fenetre.blit(home, (0, 0))
-
     pos = pygame.mouse.get_pos()
-
     menu.texte_qui_varie((288, 720), (133, 197), rose, bleu_clair, 446, 143, 40, "Map 1", pos)
     menu.texte_qui_varie((288, 720), (217, 280), rose, bleu_clair, 446, 224, 40, "Map 2", pos)
     menu.texte_qui_varie((288, 720), (296, 357), rose, bleu_clair, 446, 302, 40, "Map 3", pos)
     menu.texte_qui_varie((288, 720), (372, 434), rose, bleu_clair, 446, 378, 40, "Map 4", pos)
-
     Snow.tour(fenetre, 0, 0)
-
     pygame.display.update()
 
 pygame.quit()
