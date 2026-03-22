@@ -103,11 +103,14 @@ class Player:
             else:
                 self.enemi_balles[i][0] -= vitesse
 
-            if self.balles[i][0] < 0:
-                balles_dead.append(self.balles[i])
+            try:
+                if self.balles[i][0] < 0:
+                    balles_dead.append(self.balles[i])
 
-            if self.balles[i][0] > y_map:
-                balles_dead.append(self.balles[i])
+                if self.balles[i][0] > y_map:
+                    balles_dead.append(self.balles[i])
+            except:
+                pass
 
         for elem in balles_dead:
             print(elem)
