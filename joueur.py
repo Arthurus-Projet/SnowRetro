@@ -105,10 +105,10 @@ class Player:
                 self.enemi_balles[i][0] -= vitesse
 
             
-            if self.balles[i][0] < 0:
+            if self.enemi_balles[i][0] < 0:
                 balles_dead_enemi.append(self.enemi_balles[i])
 
-            if self.balles[i][0] > y_map:
+            if self.enemi_balles[i][0] > y_map:
                 balles_dead_enemi.append(self.enemi_balles[i])
             
 
