@@ -112,9 +112,14 @@ class Player:
             except:
                 pass
 
+
         for elem in balles_dead:
             print(elem)
-            self.balles.remove(elem)
+            try:
+                self.balles_dead.remove(elem)
+            except:
+                self.balles.remove(elem)
+
 
     # quand on tire une balle
     def create_balle(self):
