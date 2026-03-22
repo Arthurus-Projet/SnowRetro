@@ -83,6 +83,7 @@ class Player:
     def avancement_balles(self, y_map):
 
         balles_dead = []
+        balles_dead_enemi = []
         vitesse = 9
         for i in range(len(self.balles)):
             if self.balles[i][2] == "d": # si la balle va à doite
@@ -103,22 +104,22 @@ class Player:
             else:
                 self.enemi_balles[i][0] -= vitesse
 
-            try:
-                if self.balles[i][0] < 0:
-                    balles_dead.append(self.balles[i])
+            
+            if self.balles[i][0] < 0:
+                balles_dead_enemi.append(self.enemi_balles[i])
 
-                if self.balles[i][0] > y_map:
-                    balles_dead.append(self.balles[i])
-            except:
-                pass
+            if self.balles[i][0] > y_map:
+                balles_dead_enemi.append(self.enemi_balles[i])
+            
 
 
         for elem in balles_dead:
-            print(elem)
-            try:
-                self.balles_dead.remove(elem)
-            except:
-                self.balles.remove(elem)
+            self.balles.remove(elem)
+
+        for elem in balles_dead_enemi:
+            self.enemi_balles.remove(elem)
+                    
+
 
 
     # quand on tire une balle
