@@ -13,6 +13,8 @@ class Player:
         self.enemi_balles = []
         self.orientation_droite = True # le joueur est tourné vers la droite (utile pour le lancer de balle)
         self.taille_balle = 20
+        self.number_dead = -1
+        self.number_dead_enemi = -1
 
         self.give_position_player(map)
         self.reset()
@@ -49,6 +51,8 @@ class Player:
 
         self.biais_x = self.save_biais_x
         self.biais_y = self.save_biais_y
+
+        self.number_dead += 1
 
 
     def player_fall(self, height, map):

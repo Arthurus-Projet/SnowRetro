@@ -22,7 +22,7 @@ class home_menu:
         self.fenetre.blit(texte, (x, y))
 
     def texte(self, texte, couleur, x, y, taille_texte):
-        self.update_font(self.police, self.size)
+        self.update_font(self.police, taille_texte)
         txt, r = self.font.render(texte, couleur)
         self.afficher_texte(txt, x, y)
 

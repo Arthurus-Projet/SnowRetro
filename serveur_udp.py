@@ -15,8 +15,6 @@ while True:
     ecrire("enemi.txt", message.decode("utf-8"))
     print(f'{message}')
 
-
-
     message = lire_str('perso.txt')
     server_socket.sendto(message, address)
     print("Message Send")

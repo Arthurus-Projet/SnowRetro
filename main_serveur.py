@@ -471,7 +471,11 @@ def jeu(map, fenetre):
 
 
         fps = str(int(clock.get_fps()))
-        menu.texte(fps, (255, 255, 0), 20, 20, 30)
+        menu.texte(fps, (255, 255, 0), 20, 20, 50)
+
+  
+        menu.texte(str(perso_class.number_dead), (255, 255, 0), 850, 20, 50)
+        menu.texte("Deaths", (255, 255, 0), 850, 68, 20)
 
         if bool_marche:
             perso_anime.set_time(dt)
@@ -526,10 +530,10 @@ while continuer:
 
     fenetre.blit(home, (0, 0))
     pos = pygame.mouse.get_pos()
-    menu.texte_qui_varie((288, 720), (133, 197), rose, bleu_clair, 446, 143, 40, "Map 1", pos)
-    menu.texte_qui_varie((288, 720), (217, 280), rose, bleu_clair, 446, 224, 40, "Map 2", pos)
-    menu.texte_qui_varie((288, 720), (296, 357), rose, bleu_clair, 446, 302, 40, "Map 3", pos)
-    menu.texte_qui_varie((288, 720), (372, 434), rose, bleu_clair, 446, 378, 40, "Map 4", pos)
+    menu.texte_qui_varie((288, 720), (133, 197), rose, bleu_clair, 446, 143, 50, "Map 1", pos)
+    menu.texte_qui_varie((288, 720), (217, 280), rose, bleu_clair, 446, 224, 50, "Map 2", pos)
+    menu.texte_qui_varie((288, 720), (296, 357), rose, bleu_clair, 446, 302, 50, "Map 3", pos)
+    menu.texte_qui_varie((288, 720), (372, 434), rose, bleu_clair, 446, 378, 50, "Map 4", pos)
     Snow.tour(fenetre, 0, 0)
     pygame.display.update()
 
