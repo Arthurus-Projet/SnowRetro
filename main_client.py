@@ -84,6 +84,7 @@ blanc = (255, 255, 255)
 noir = (0, 0, 0)
 rouge = (255, 0, 0)
 bleu = (0, 0, 255)
+jaune = (255, 255, 0)
 mystère = (randint(0, 255), randint(0, 255), randint(0, 255))
 
 print(mystère)
@@ -471,11 +472,21 @@ def jeu(map, fenetre):
                 py < by + perso_class.taille_balle and
                 py + taille_joueur_y > by):
                 perso_class.dead = True
+                perso_class.enemi_balles.remove(balle)
         # ============================
 
 
         fps = str(int(clock.get_fps()))
-        menu.texte(fps, (255, 255, 0), 20, 20, 30)
+        menu.texte(fps, (255, 255, 0), 20, 20, 50)
+
+        color = [blanc if perso_class.number_dead != perso_class.number_dead_enemi else jaune][0]
+        # Deaths
+        menu.texte(str(perso_class.number_dead), color, 850, 20, 50)
+        menu.texte("Deaths", color, 850, 68, 20)
+
+        # Kills
+        menu.texte(str(perso_class.number_dead_enemi), color, 930, 20, 50)
+        menu.texte("Kills", color, 930, 68, 20)
 
         if bool_marche:
             perso_anime.set_time(dt)
