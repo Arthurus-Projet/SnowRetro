@@ -428,9 +428,9 @@ def jeu(map, fenetre):
                 I.append(perso_class.balles[i])
         perso_class.remove_balle(I)
 
-        # Affiche MES balles (en rouge)
+        # Affiche MES balles 
         for balle in perso_class.balles:
-            pygame.draw.rect(fenetre, rouge, (balle[0] + perso_class.biais_x, balle[1] + perso_class.biais_y, perso_class.taille_balle, perso_class.taille_balle))
+            pygame.draw.rect(fenetre, blanc, (balle[0] + perso_class.biais_x, balle[1] + perso_class.biais_y, perso_class.taille_balle, perso_class.taille_balle))
 
 
         # ===== BALLES ENNEMIES =====
@@ -473,9 +473,13 @@ def jeu(map, fenetre):
         fps = str(int(clock.get_fps()))
         menu.texte(fps, (255, 255, 0), 20, 20, 50)
 
-  
-        menu.texte(str(perso_class.number_dead), (255, 255, 0), 850, 20, 50)
+        # Deaths
+        menu.texte(str(perso_class.number_dead), [blanc if perso_class.number_dead == perso_class.number_dead_enemi else (255, 255, 0)][0], 850, 20, 50)
         menu.texte("Deaths", (255, 255, 0), 850, 68, 20)
+
+        # Kills
+        menu.texte(str(perso_class.number_dead_enemi), (255, 255, 0), 930, 20, 50)
+        menu.texte("Kills", (255, 255, 0), 930, 68, 20)
 
         if bool_marche:
             perso_anime.set_time(dt)

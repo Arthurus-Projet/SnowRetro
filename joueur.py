@@ -14,7 +14,7 @@ class Player:
         self.orientation_droite = True # le joueur est tourné vers la droite (utile pour le lancer de balle)
         self.taille_balle = 20
         self.number_dead = -1
-        self.number_dead_enemi = -1
+        self.number_dead_enemi = 0
 
         self.give_position_player(map)
         self.reset()

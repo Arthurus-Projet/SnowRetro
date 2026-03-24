@@ -432,9 +432,9 @@ def jeu(map, fenetre):
                 I.append(perso_class.balles[i])
         perso_class.remove_balle(I)
 
-        # Affiche MES balles (en rouge)
+        # Affiche MES balles 
         for balle in perso_class.balles:
-            pygame.draw.rect(fenetre, rouge, (balle[0] + perso_class.biais_x, balle[1] + perso_class.biais_y, perso_class.taille_balle, perso_class.taille_balle))
+            pygame.draw.rect(fenetre, blanc, (balle[0] + perso_class.biais_x, balle[1] + perso_class.biais_y, perso_class.taille_balle, perso_class.taille_balle))
 
 
         # ===== BALLES ENNEMIES =====
